@@ -10,6 +10,9 @@ site_map = {
     "jjwxc":5,
 }
 
+input_file = "url.list"
+
+
 
 #下载时延，1s
 DOWNLOAD_DELAY = 1
