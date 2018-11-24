@@ -10,8 +10,10 @@ site_map = {
     "jjwxc":5,
 }
 
-input_file = "url.list"
+WRONG_SITE = 999
 
+input_file = "url.list"
+output_file_pre = "data"
 
 
 #下载时延，1s
