@@ -23,9 +23,8 @@ def main():
         except Exception,e:
             logging.warning("url.txt file format maybe wrong.")
             continue
-        p = Parse(i)
+        p = Parse([i])
         p.parse()
-
     pass
 
 if __name__ == '__main__':
