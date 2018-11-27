@@ -10,8 +10,13 @@ import commands
 import logging
 
 def main():
+    logging.info("local execute path is %s"%(os.getcwd()))
     if not os.path.exists(input_file):
-        commands.getstatusoutput("touch %s"%(input_file))
+        res = commands.getstatusoutput("touch %s"%(input_file))
+        if res[0] != 0:
+            logging.warning("touch file [%s] failed , exit..."%(input_file))
+            exit()
+    logging.info("file [%s] has been touched."%(input_file))
     url_list = []
     with open(input_file,"r") as f:
         tmp = f.read()

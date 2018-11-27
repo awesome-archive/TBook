@@ -146,7 +146,7 @@ class Parse(object):
 if __name__ == '__main__':
     #test
     #test = Parse([]).parse()
-    test = Parse(["https://book.qidian.com/info/1004608738"]).parse()
+    #test = Parse(["https://book.qidian.com/info/1004608738"]).parse()
     #test = Parse(["http://www.jjwxc.net/onebook.php?novelid=472870"]).parse()
 
     pass
