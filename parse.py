@@ -11,7 +11,11 @@ from pyquery import PyQuery
 import os
 import commands
 import time
-
+from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
+from selenium.common import exceptions
+from selenium.webdriver.common.proxy import *
+from selenium import webdriver
+from selenium.webdriver.common.action_chains import ActionChains
 
 file_name = __file__.split('/')[-1].replace(".py","")
 logging.basicConfig(level=logging.INFO,
@@ -28,18 +32,31 @@ console.setFormatter(formatter)
 logging.getLogger('').addHandler(console)
 
 
+dcap = dict(DesiredCapabilities.PHANTOMJS)
+#pc端的ua
+dcap["phantomjs.page.settings.userAgent"] = (
+    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Ubuntu Chromium/62.0.3202.94 Ch"
+    "rome/62.0.3202.94 Safari/537.36"
+        )
+
+
 class Parse(object):
     def __init__(self,url):
         self.site = self.get_site(url)
         self.url = url
         self.headers = {"User-Agent":random.choice(User_Agent)}
-
+        #建立无头浏览器，for渲染页面
+        self.driver = webdriver.PhantomJS()
     def get_site(self,url):
         #使用第一个传入元素标识，在传进来下载之前，自动分好类
         try:
             valid_url = urlparse.urlparse(url[0])
-            #print type(valid_url.netloc)
-            site = re.search("(?<=\.)\w+(?=\.)",valid_url.netloc).group()
+            #print valid_url.netloc
+            #暂时只有纵横没有前缀，其他的前缀是：www 或者 book
+            if re.search("www",valid_url.netloc) or re.search("book",valid_url.netloc):
+                site = re.search("(?<=\.)\w+(?=\.)",valid_url.netloc).group()
+            else:
+                site = re.search("^\w+(?=\.)",valid_url.netloc).group()
         except Exception,e:
             logging.warning("get site [%s] error."%(url))
             return WRONG_SITE
@@ -85,7 +102,14 @@ class Parse(object):
             f.close()
         pass
 
-    def fetch(self,url):
+    def fetch(self,url,headers={}):
+        if not type(headers) == dict:
+            #不符合条件不添加
+            return requests.get(url,headers=self.headers).content
+        for k,v in headers.items():
+            if self.headers.get(k):
+                continue
+            self.headers[k] = v
         return requests.get(url,headers=self.headers).content
 
     def qidian(self):
@@ -105,6 +129,64 @@ class Parse(object):
         pass
 
     def chuangshi(self):
+        if isinstance(self.url,list):
+            for url in self.url:
+                try:
+                    res = PyQuery(self.fetch(url))
+                    bookname = res('.title > a > b').text().strip().replace(" ", "")
+                    # 下载页面
+                    name = bookname.encode("utf-8") + ".txt"
+                    print name
+                    detail_url = []
+                    self.exists(name)
+                    #详细章节分页面
+                    #print detail_url
+                    detail_url = res('.btnlist a:nth-of-type(2)').attr.href
+                    print detail_url
+                    detail_res = PyQuery(self.fetch(detail_url))
+                    count = 0
+                    #此时char为 卷数，弟几卷
+                    for char, tmp in enumerate(detail_res('.list').items()):
+                        if re.search("VIP卷",tmp('.f900').text().strip().encode('utf-8')):
+                            #logging.info("VIP卷，直接跳过，第 %d 卷"%(char))
+                            continue
+                        #if char < 16:
+                        #    continue
+                        for i in tmp(".block_ul li a").items():
+                            url = i.attr.href
+                            #print url
+                            if not url:
+                                # logging.warning("章节[%s]被锁住，没法不能查看."%(title))
+                                continue
+                            """
+                            #通常的访问无法获取到内容
+                            #print i
+                            #res = PyQuery(self.fetch(url))
+                            #res = PyQuery(self.fetch(url,headers={"Cookie":"pgv_pvid=8964445305; pac_uid=0_d6480855a5bb2; pgv_pvi=969894912; tvfe_boss_uuid=c0772c324f2a1036; bdshare_firstime=1537089727537; readBeginnerGuide=1; pgv_si=s1909591040; qqmusic_fromtag=66; PHPSESSID=k4r31aa42vm39k3ru88n5rekv6; pgv_info=ssid=s9063563124&pgvReferrer=; d_rh_new=1001760719.66-22532547.366; mr3=czo2NDoiAFsGWwUxBjIMMAk4UzcDYwAwVDFYbAFmUnwHM1QyVAUPIwlUVGMDNVhhXW5bOlEyCDxSN1Z%2FDWBSZgIxVl0MXSI7; ied_rf=chuangshi.qq.com/bk/ds/AGkENF1gVjYAPVRiATEBYw1vBzw-r-67.html"}))
+                            
+                            print res.text() 
+                            title = res('.chapterTitle').text().strip().encode('utf-8')
+                            text = res('.bookreadercontent').text().encode('utf-8')
+                            """
+                            
+                            #self.driver.maximize_window()
+                            #self.driver.delete_all_cookies()
+                            self.driver.set_page_load_timeout(3)
+                            self.driver.get(url)
+                            #click_btn = driver.find_element_by_xpath("//*[@class='redBtn']")
+                            #ActionChains(driver).click(click_btn).perform()
+                            #driver.save_screenshot("username.png")
+                            title = self.driver.find_element_by_xpath("//*[@data-node='chapterTitle']").text.encode('utf-8')
+                            text = self.driver.find_element_by_xpath("//*[@class='bookreadercontent']").text.encode('utf-8')
+                            #print text
+                            #这边count才是章节数，char是卷数
+                            self.save(name, "[tingyun--%s]" % (count) + title + "\n\n" + text + "\n\n")
+                            count += 1
+                            # 下载时延
+                            time.sleep(DOWNLOAD_DELAY)
+                    self.driver.close()
+                except Exception, e:
+                    logging.warning("download error [%s] , [%s]" % (url, e))
         pass
 
     def xxsy(self):
@@ -118,7 +200,7 @@ class Parse(object):
                     print name
                     detail_url = []
                     self.exists(name)
-                    print res('.catalog-list').text()
+                    #print res('.catalog-list').text()
                     #"http://www.xxsy.net/partview/GetChapterList?bookid=1073941&noNeedBuy=1&special=0&maxFreeChapterId=0"
                     bookid = re.search("\d+(?=\.html)",url).group()
                     #print bookid
@@ -127,7 +209,6 @@ class Parse(object):
                     #print detail_url
                     
                     detail_res = PyQuery(self.fetch(detail_url))
-                    #vip的类型是class="vip col-4"
                     for char, tmp in enumerate(detail_res('[class="catalog-list cl"] li a').items()):
                         #if char < 16:
                         #    continue
@@ -222,5 +303,6 @@ if __name__ == '__main__':
     #test = Parse(["http://www.jjwxc.net/onebook.php?novelid=472870"]).parse()
     #test = Parse(["http://book.zongheng.com/book/578305.html"]).parse()
     #test = Parse(["http://www.xxsy.net/info/1073941.html"]).parse()
+    test = Parse(["http://chuangshi.qq.com/bk/ds/1001760719.html"]).parse()
 
     pass
