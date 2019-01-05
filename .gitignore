@@ -3,3 +3,6 @@
 data
 *.txt
 *.list
+build
+*.spec
+dist

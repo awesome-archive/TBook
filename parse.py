@@ -117,7 +117,7 @@ class Parse(object):
         if isinstance(self.url,list):
             for url in self.url:
                 try:
-                    res = PyQuery(self.fetch(self.url))
+                    res = PyQuery(self.fetch(url))
                     bookname = res('[itemprop="articleSection"]').text().strip().replace(" ", "")
                     # 下载页面
                     name = bookname.encode("utf-8") + ".txt"
@@ -125,8 +125,8 @@ class Parse(object):
                     detail_url = []
                     self.exists(name)
                     for char, tmp in enumerate(res('[itemprop="url"]').items()):
-                        if char < 16:
-                            continue
+                        #if char < 16:
+                        #    continue
                         url = tmp.attr.href
                         if not url:
                             # logging.warning("章节[%s]被锁住，没法不能查看."%(title))
@@ -140,7 +140,7 @@ class Parse(object):
                         time.sleep(DOWNLOAD_DELAY)
 
                 except Exception, e:
-                    logging.warning("download error [%s] , [%s]" % (self.url, e))
+                    logging.warning("download error [%s] , [%s]" % (url, e))
         pass
 
 if __name__ == '__main__':
