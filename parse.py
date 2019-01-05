@@ -168,23 +168,29 @@ class Parse(object):
                             title = res('.chapterTitle').text().strip().encode('utf-8')
                             text = res('.bookreadercontent').text().encode('utf-8')
                             """
+                            #重试3次
+                            retry_time = 0
+                            flag = 0
+                            while((retry_time < 3) and (not flag)):
+                                try:
+                                    driver = webdriver.PhantomJS()
+                                    driver.set_page_load_timeout(3)
+                                    driver.get(url)
+                                    title = driver.find_element_by_xpath("//*[@data-node='chapterTitle']").text.encode('utf-8')
+                                    text = driver.find_element_by_xpath("//*[@class='bookreadercontent']").text.encode('utf-8')
+                                    #print text
+                                    #这边count才是章节数，char是卷数
+                                    self.save(name, "[tingyun--%s]" % (count) + title + "\n\n" + text + "\n\n")
+                                    #关闭所有窗口，直接退出浏览器
+                                    driver.quit()
+                                    count += 1
+                                    flag = 1
+                                except Exception,e:
+                                    logging.warning(e)
+                                    retry_time += 1
                             
-                            #self.driver.maximize_window()
-                            #self.driver.delete_all_cookies()
-                            self.driver.set_page_load_timeout(3)
-                            self.driver.get(url)
-                            #click_btn = driver.find_element_by_xpath("//*[@class='redBtn']")
-                            #ActionChains(driver).click(click_btn).perform()
-                            #driver.save_screenshot("username.png")
-                            title = self.driver.find_element_by_xpath("//*[@data-node='chapterTitle']").text.encode('utf-8')
-                            text = self.driver.find_element_by_xpath("//*[@class='bookreadercontent']").text.encode('utf-8')
-                            #print text
-                            #这边count才是章节数，char是卷数
-                            self.save(name, "[tingyun--%s]" % (count) + title + "\n\n" + text + "\n\n")
-                            count += 1
                             # 下载时延
                             time.sleep(DOWNLOAD_DELAY)
-                    self.driver.close()
                 except Exception, e:
                     logging.warning("download error [%s] , [%s]" % (url, e))
         pass
@@ -303,6 +309,6 @@ if __name__ == '__main__':
     #test = Parse(["http://www.jjwxc.net/onebook.php?novelid=472870"]).parse()
     #test = Parse(["http://book.zongheng.com/book/578305.html"]).parse()
     #test = Parse(["http://www.xxsy.net/info/1073941.html"]).parse()
-    test = Parse(["http://chuangshi.qq.com/bk/ds/1001760719.html"]).parse()
+    #test = Parse(["http://chuangshi.qq.com/bk/ds/1001760719.html"]).parse()
 
     pass
