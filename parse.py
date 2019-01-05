@@ -108,8 +108,47 @@ class Parse(object):
         pass
 
     def xxsy(self):
+        if isinstance(self.url,list):
+            for url in self.url:
+                try:
+                    res = PyQuery(self.fetch(url))
+                    bookname = res('h1').text().strip().replace(" ", "")
+                    # 下载页面
+                    name = bookname.encode("utf-8") + ".txt"
+                    print name
+                    detail_url = []
+                    self.exists(name)
+                    print res('.catalog-list').text()
+                    #"http://www.xxsy.net/partview/GetChapterList?bookid=1073941&noNeedBuy=1&special=0&maxFreeChapterId=0"
+                    bookid = re.search("\d+(?=\.html)",url).group()
+                    #print bookid
+                    detail_url =  "http://www.xxsy.net/partview/GetChapterList?bookid=%s&noNeedBuy=1&special=0&maxFreeChapterId=0"%(bookid)
+                    #详细章节分页面
+                    #print detail_url
+                    
+                    detail_res = PyQuery(self.fetch(detail_url))
+                    #vip的类型是class="vip col-4"
+                    for char, tmp in enumerate(detail_res('[class="catalog-list cl"] li a').items()):
+                        #if char < 16:
+                        #    continue
+                        url = tmp.attr.href
+                        #print url
+                        if not url:
+                            # logging.warning("章节[%s]被锁住，没法不能查看."%(title))
+                            continue
+                        url = "http://" + urlparse.urlparse(detail_url).netloc + url
+                        print url
+                        res = PyQuery(self.fetch(url))
+                        title = res('.chapter-title').text().strip().encode('utf-8')
+                        text = res('.chapter-main').text().encode('utf-8')
+                        self.save(name, "[tingyun--%s]" % (char) + title + "\n\n" + text + "\n\n")
+                        # 下载时延
+                        time.sleep(DOWNLOAD_DELAY)
+                        
+                except Exception, e:
+                    logging.warning("download error [%s] , [%s]" % (url, e))
+        
         pass
-
     def zongheng(self):
         if isinstance(self.url,list):
             for url in self.url:
@@ -182,5 +221,6 @@ if __name__ == '__main__':
     #test = Parse(["https://book.qidian.com/info/1004608738"]).parse()
     #test = Parse(["http://www.jjwxc.net/onebook.php?novelid=472870"]).parse()
     #test = Parse(["http://book.zongheng.com/book/578305.html"]).parse()
+    #test = Parse(["http://www.xxsy.net/info/1073941.html"]).parse()
 
     pass
